@@ -15,20 +15,10 @@
       transition: background-color 0.5s;
     }
 
-    div#main-div {
-      padding-top: 30px;
-    }
-
     h1 {
       font-size: 36px;
       color: #333;
-      text-align: center;
     }
-
-    h2 {
-      text-align: center;
-    }
-
 
     .weather-block .weather-icon {
       display: block;
@@ -150,27 +140,16 @@
     #favorites-container button:hover {
       background-color: #c0392b;
     }
-
-    .hidden {
-      display: none;
-    }
   </style>
 </head>
 
 <body>
-
-  <div id="main-div">
-    <h1>Weathry</h1>
-    <div id="location-form">
-      <input type="text" id="location-input" placeholder="Enter zip code or city">
-      <button type="submit" id="get-weather-btn" onclick="getWeather()">Get Weather</button>
-    </div>
+  <h1>Weathry</h1>
+  <div id="location-form">
+    <input type="text" id="location-input" placeholder="Enter zip code or city">
+    <button type="submit" id="get-weather-btn" onclick="getWeather()">Get Weather</button>
   </div>
-  <div class="button-container" id="button-container">
-    <button type="button" id="back-to-search-btn" class="hidden" onclick="backToSearch()">Back to Search</button>
-    <button type="button" id="save-to-favorites-btn" class="hidden" onclick="saveToFavorites()">Save to
-      Favorites</button>
-  </div>
+  <div class="button-container" id="button-container"></div>
   <div id="favorites-container"></div>
   <div id="weather-container"></div>
 
@@ -216,22 +195,24 @@
 
     function displayWeather(currentData, forecastData) {
       const weatherContainer = document.getElementById('weather-container');
+      const locationForm = document.getElementById('location-form');
       const buttonContainer = document.getElementById('button-container');
       const favoritesContainer = document.getElementById('favorites-container');
 
+      // Clear the weather container
+      weatherContainer.innerHTML = '';
+
+      locationForm.style.display = 'none';
       buttonContainer.innerHTML = '';
 
       const backToSearchBtn = document.createElement('button');
-      backToSearchBtn.id = 'back-to-search-btn';
       backToSearchBtn.textContent = 'Back to Search';
       backToSearchBtn.onclick = function () {
-        document.getElementById('location-form').style.display = 'flex';
+        locationForm.style.display = 'flex';
         weatherContainer.innerHTML = '';
-        buttonContainer.innerHTML = '';
       };
 
       const saveToFavoritesBtn = document.createElement('button');
-      saveToFavoritesBtn.id = 'save-to-favorites-btn';
       saveToFavoritesBtn.textContent = 'Save to Favorites';
       saveToFavoritesBtn.onclick = function () {
         favoriteLocations.push(currentData.location);
@@ -254,7 +235,6 @@
         <p>Wind: ${currentData.current.wind_kph} Km/h </p>
         <p>Gusts: ${currentData.current.gust_kph} Km/h </p>
       `;
-      weatherContainer.innerHTML = '';
       weatherContainer.appendChild(currentWeatherBlock);
 
       const forecastWeatherBlock = document.createElement('div');
@@ -285,11 +265,14 @@
 
       if (favoriteLocations.length > 0) {
         const favoritesList = document.createElement('ul');
-        favoritesList.innerHTML = '<h2>Favorite Locations</h2>';
 
         favoriteLocations.forEach((location, index) => {
           const favoriteItem = document.createElement('li');
           favoriteItem.textContent = `${location.name}, ${location.region}, ${location.country}`;
+          favoriteItem.style.cursor = 'pointer'; // Add cursor pointer style
+          favoriteItem.addEventListener('click', function () { // Add click event listener
+            getWeatherByFavorite(location); // Fetch weather data for the clicked location
+          });
 
           const deleteButton = document.createElement('button');
           deleteButton.textContent = 'Delete';
@@ -305,7 +288,34 @@
 
         favoritesContainer.appendChild(favoritesList);
       } else {
-        favoritesContainer.innerHTML = '<p>No favorite locations saved.</p>';
+        favoritesContainer.textContent = 'No favorite locations saved.';
+      }
+    }
+
+    async function getWeatherByFavorite(location) {
+      const apiKey = '35c50080f21848f68bd233847240802';
+      const currentWeatherURL = `https://api.weatherapi.com/v1/current.json?key=${apiKey}&q=${location.name}&aqi=yes`;
+      const forecastURL = `https://api.weatherapi.com/v1/forecast.json?key=${apiKey}&q=${location.name}&days=7&aqi=no&alerts=no`;
+
+      try {
+        const [currentResponse, forecastResponse] = await Promise.all([
+          fetch(currentWeatherURL),
+          fetch(forecastURL)
+        ]);
+
+        if (!currentResponse.ok || !forecastResponse.ok) {
+          throw new Error('Weather data not available');
+        }
+
+        const [currentData, forecastData] = await Promise.all([
+          currentResponse.json(),
+          forecastResponse.json()
+        ]);
+
+        displayWeather(currentData, forecastData);
+      } catch (error) {
+        console.error('Error fetching weather data:', error);
+        document.getElementById('weather-container').innerHTML = 'Weather data not available. Please try again later.';
       }
     }
 
