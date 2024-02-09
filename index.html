@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Weathry</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap">
+  <style>
+    body {
+      font-family: 'Roboto', sans-serif;
+      text-align: center;
+      background-color: #f3f4f6;
+      padding-top: 50px;
+      transition: background-color 0.5s;
+    }
+
+    div#main-div {
+      padding-top: 30px;
+    }
+
+    h1 {
+      font-size: 36px;
+      color: #333;
+      text-align: center;
+    }
+
+    h2 {
+      text-align: center;
+    }
+
+
+    .weather-block .weather-icon {
+      display: block;
+      margin: 0 auto;
+    }
+
+    .weather-block .weather-icon img {
+      display: block;
+      margin: 0 auto;
+    }
+
+    #location-form {
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+    }
+
+    #location-input {
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      width: 200px;
+      margin-right: 10px;
+    }
+
+    #get-weather-btn {
+      padding: 10px 20px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    #get-weather-btn:hover {
+      background-color: #45a049;
+    }
+
+    .button-container {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+
+    .button-container button {
+      padding: 10px 20px;
+      background-color: #f1c40f;
+      color: #333;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+      margin-right: 10px;
+    }
+
+    .button-container button:hover {
+      background-color: #f39c12;
+    }
+
+    #weather-container {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .weather-block {
+      background-color: #fff;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+      margin: 10px;
+      max-width: 400px;
+      text-align: left;
+    }
+
+    .weather-block h2 {
+      font-size: 24px;
+      margin-bottom: 10px;
+      color: #333;
+    }
+
+    .weather-block p {
+      margin-bottom: 15px;
+      font-size: 16px;
+      color: #666;
+    }
+
+    .weather-block img {
+      vertical-align: middle;
+      margin-left: 10px;
+    }
+
+    #favorites-container {
+      margin-top: 20px;
+    }
+
+    #favorites-container ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    #favorites-container li {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 5px 0;
+    }
+
+    #favorites-container button {
+      background-color: #e74c3c;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    #favorites-container button:hover {
+      background-color: #c0392b;
+    }
+
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="main-div">
+    <h1>Weathry</h1>
+    <div id="location-form">
+      <input type="text" id="location-input" placeholder="Enter zip code or city">
+      <button type="submit" id="get-weather-btn" onclick="getWeather()">Get Weather</button>
+    </div>
+  </div>
+  <div class="button-container" id="button-container">
+    <button type="button" id="back-to-search-btn" class="hidden" onclick="backToSearch()">Back to Search</button>
+    <button type="button" id="save-to-favorites-btn" class="hidden" onclick="saveToFavorites()">Save to
+      Favorites</button>
+  </div>
+  <div id="favorites-container"></div>
+  <div id="weather-container"></div>
+
+  <script>
+    let favoriteLocations = localStorage.getItem('favoriteLocations');
+    if (!favoriteLocations) {
+      favoriteLocations = [];
+      localStorage.setItem('favoriteLocations', JSON.stringify(favoriteLocations));
+    } else {
+      favoriteLocations = JSON.parse(favoriteLocations);
+    }
+
+    async function getWeather() {
+      const locationInput = document.getElementById('location-input');
+      const location = locationInput.value.trim();
+      if (location) {
+        const apiKey = '35c50080f21848f68bd233847240802';
+        const currentWeatherURL = `https://api.weatherapi.com/v1/current.json?key=${apiKey}&q=${location}&aqi=yes`;
+        const forecastURL = `https://api.weatherapi.com/v1/forecast.json?key=${apiKey}&q=${location}&days=7&aqi=no&alerts=no`;
+
+        try {
+          const [currentResponse, forecastResponse] = await Promise.all([
+            fetch(currentWeatherURL),
+            fetch(forecastURL)
+          ]);
+
+          if (!currentResponse.ok || !forecastResponse.ok) {
+            throw new Error('Weather data not available');
+          }
+
+          const [currentData, forecastData] = await Promise.all([
+            currentResponse.json(),
+            forecastResponse.json()
+          ]);
+
+          displayWeather(currentData, forecastData);
+        } catch (error) {
+          console.error('Error fetching weather data:', error);
+          document.getElementById('weather-container').innerHTML = 'Weather data not available. Please try again later.';
+        }
+      }
+    }
+
+    function displayWeather(currentData, forecastData) {
+      const weatherContainer = document.getElementById('weather-container');
+      const buttonContainer = document.getElementById('button-container');
+      const favoritesContainer = document.getElementById('favorites-container');
+
+      buttonContainer.innerHTML = '';
+
+      const backToSearchBtn = document.createElement('button');
+      backToSearchBtn.id = 'back-to-search-btn';
+      backToSearchBtn.textContent = 'Back to Search';
+      backToSearchBtn.onclick = function () {
+        document.getElementById('location-form').style.display = 'flex';
+        weatherContainer.innerHTML = '';
+        buttonContainer.innerHTML = '';
+      };
+
+      const saveToFavoritesBtn = document.createElement('button');
+      saveToFavoritesBtn.id = 'save-to-favorites-btn';
+      saveToFavoritesBtn.textContent = 'Save to Favorites';
+      saveToFavoritesBtn.onclick = function () {
+        favoriteLocations.push(currentData.location);
+        localStorage.setItem('favoriteLocations', JSON.stringify(favoriteLocations));
+        alert('Location saved to favorites!');
+        displayFavoriteLocations();
+      };
+
+      buttonContainer.appendChild(backToSearchBtn);
+      buttonContainer.appendChild(saveToFavoritesBtn);
+
+      const currentWeatherBlock = document.createElement('div');
+      currentWeatherBlock.className = 'weather-block current-weather-block';
+      currentWeatherBlock.innerHTML = `
+        <h2>Current Weather</h2>
+        <img class="weather-icon" src="${currentData.current.condition.icon}" alt="Weather icon">
+        <p>Location: ${currentData.location.name}, ${currentData.location.region}, ${currentData.location.country}</p>
+        <p>Temperature: ${currentData.current.temp_c}°C / ${currentData.current.temp_f}°F</p>
+        <p>Condition: ${currentData.current.condition.text}</p>
+        <p>Wind: ${currentData.current.wind_kph} Km/h </p>
+        <p>Gusts: ${currentData.current.gust_kph} Km/h </p>
+      `;
+      weatherContainer.innerHTML = '';
+      weatherContainer.appendChild(currentWeatherBlock);
+
+      const forecastWeatherBlock = document.createElement('div');
+      forecastWeatherBlock.className = 'weather-block';
+      forecastWeatherBlock.innerHTML = `
+        <h2>Forecast for Next 7 Days</h2>
+        <ul>
+          ${forecastData.forecast.forecastday.map(day => `
+            <li>
+              <strong>${day.date}</strong>: 
+              ${day.day.avgtemp_c}°C/${day.day.avgtemp_f}°F, 
+              ${day.day.condition.text}
+              <div> <img class="weather-icon" src="${day.day.condition.icon}" alt="Weather icon"> </div>
+            </li>
+          `).join('')}
+        </ul>
+      `;
+      weatherContainer.appendChild(forecastWeatherBlock);
+
+      displayFavoriteLocations();
+    }
+
+    function displayFavoriteLocations() {
+      const favoritesContainer = document.getElementById('favorites-container');
+      favoritesContainer.innerHTML = '';
+
+      const favoriteLocations = JSON.parse(localStorage.getItem('favoriteLocations'));
+
+      if (favoriteLocations.length > 0) {
+        const favoritesList = document.createElement('ul');
+        favoritesList.innerHTML = '<h2>Favorite Locations</h2>';
+
+        favoriteLocations.forEach((location, index) => {
+          const favoriteItem = document.createElement('li');
+          favoriteItem.textContent = `${location.name}, ${location.region}, ${location.country}`;
+
+          const deleteButton = document.createElement('button');
+          deleteButton.textContent = 'Delete';
+          deleteButton.onclick = function () {
+            favoriteLocations.splice(index, 1);
+            localStorage.setItem('favoriteLocations', JSON.stringify(favoriteLocations));
+            displayFavoriteLocations();
+          };
+
+          favoriteItem.appendChild(deleteButton);
+          favoritesList.appendChild(favoriteItem);
+        });
+
+        favoritesContainer.appendChild(favoritesList);
+      } else {
+        favoritesContainer.innerHTML = '<p>No favorite locations saved.</p>';
+      }
+    }
+
+    displayFavoriteLocations();
+  </script>
+</body>
+
+</html>
