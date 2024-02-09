@@ -22,6 +22,12 @@
         favoriteLocations.forEach((location, index) => {
           const favoriteItem = document.createElement('li');
           favoriteItem.textContent = `${location.name}, ${location.region}, ${location.country}`;
+          favoriteItem.style.cursor = 'pointer'; // Add cursor pointer style
+          favoriteItem.addEventListener('click', function () { // Add click event listener
+            // Handle click on favorite location
+            alert(`You clicked on ${location.name}`);
+            // You can redirect to weather information for this location or perform any other action
+          });
 
           const deleteButton = document.createElement('button');
           deleteButton.textContent = 'Delete';
